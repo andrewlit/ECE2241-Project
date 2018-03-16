@@ -127,7 +127,7 @@ void dispense(int n)
 
 		//Start polling the photointerrupter
 		bool poll = 1;
-		bool lastReading = 0, reading = 0, passed = 1;
+		bool lastReading = 0, reading = 0, passed = 0, error = 0;
 		int startTime = millis();
 		int runTime = 0;
 		int dropTime = 0;
@@ -144,8 +144,19 @@ void dispense(int n)
 				passed = 1; //The pill has passed. Check for another	
 			}
 
+			//If a pill has been released, watch for more
+			if (passed && !lastReading && reading)
+			{
+				//if we're here, there was an issue!
+				error = 1;
+				break;
+
+			}
+
+
+
 			//Check if it's taken too long
-			if ( runTime > 500)
+			if ( runTime > 500 && !passed)
 			{
 				//Re-rotate the servo
 				dispenseServo.write(DISPENSE_COLLECT);
@@ -163,7 +174,25 @@ void dispense(int n)
 
 			//Update the amount of time of dispensing
 			runTime = millis() - startTime();
+			//Set the lastReading variable
+			lastReading = reading;
 		}
+
+		//Out of the loop because it either worked or there was an error
+		dispenseError();
+		//get out of this loop
+		break;
+
+	}
+
+	void dispenseError()
+	{
+		//Tell the user that there was an error!
+		lcd.print("ERROR"); //FIX THIS!!!
+		//Dump the pills
+		checkServo.write(CHECK_DISCARD);
+		delay(300);
+		checkServo.write(CHECK_CLOSE);
 
 	}
 

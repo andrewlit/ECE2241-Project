@@ -1,5 +1,6 @@
 /*
    PILL DISPENSER FIRMWARE
+   A. Lit, 2018
    Pin mappings:
 
  **SERVOS**
@@ -26,7 +27,7 @@ BUZZER: D8
 PHOTOR: A0
  */
 
-
+//Definitions
 #include <Wire.h>
 #include <LCD.h>
 #include <LiquidCrystal_I2C.h>
@@ -116,6 +117,11 @@ void loop()
 void dispense(int n)
 {
 	int count = 0;
+	bool lastReading = 0, reading = 0, passed = 0, error = 0;
+	int startTime = millis();
+	int runTime = 0;
+	int dropTime = 0;
+	byte attempts = 0;
 	//Run this code n times
 	for (int x =0; x < n; x++)
 	{
@@ -127,12 +133,7 @@ void dispense(int n)
 
 		//Start polling the photointerrupter
 		bool poll = 1;
-		bool lastReading = 0, reading = 0, passed = 0, error = 0;
-		int startTime = millis();
-		int runTime = 0;
-		int dropTime = 0;
-		byte attempts = 0;
-		
+
 		while (attempts < 3)
 		{
 			//Read the sensor value
@@ -150,10 +151,7 @@ void dispense(int n)
 				//if we're here, there was an issue!
 				error = 1;
 				break;
-
 			}
-
-
 
 			//Check if it's taken too long
 			if ( runTime > 500 && !passed)
@@ -171,7 +169,6 @@ void dispense(int n)
 				attempts ++;
 			}
 
-
 			//Update the amount of time of dispensing
 			runTime = millis() - startTime();
 			//Set the lastReading variable
@@ -179,24 +176,36 @@ void dispense(int n)
 		}
 
 		//Out of the loop because it either worked or there was an error
-		dispenseError();
-		//get out of this loop
-		break;
+		if (error)
+		{
+			dispenseError();
+			//get out of this loop
+			break;
+		}
+		else //it must have worked
+		{
+			dispenseSuccess();
+		}
 
 	}
-
-	void dispenseError()
-	{
-		//Tell the user that there was an error!
-		lcd.print("ERROR"); //FIX THIS!!!
-		//Dump the pills
-		checkServo.write(CHECK_DISCARD);
-		delay(300);
-		checkServo.write(CHECK_CLOSE);
-
-	}
-
 }
 
+void dispenseSuccess() //The pills have been successfully counted, dispense
+{
+	//Tell the user that it was successful
+	lcd.print("Worked"); //FIX THIS
+	//release the pills
+	checkServo.write(CHECK_DISPENSE);
+	delay(300);
+	checkServo.write(CHECK_CLOSE);
+}
 
-
+void dispenseError()
+{
+	//Tell the user that there was an error!
+	lcd.print("ERROR"); //FIX THIS!!!
+	//Dump the pills
+	checkServo.write(CHECK_DISCARD);
+	delay(300);
+	checkServo.write(CHECK_CLOSE);
+}
